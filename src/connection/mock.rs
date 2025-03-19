@@ -1,4 +1,4 @@
-use crate::{AuthField, Connection};
+use crate::{AuthField, Connection, Protocol};
 use async_trait::async_trait;
 use tokio::sync::broadcast;
 
@@ -34,7 +34,10 @@ impl Connection for MockConnection {
         self.event_tx.subscribe()
     }
 
-    fn protocol_name() -> String {
-        "Mock".to_string()
+    fn protocol_spec() -> Protocol {
+        Protocol {
+            name: "Mock".to_string(),
+            auth: None,
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{AuthField, Channel, Message};
+use crate::{AuthField, Channel, Message, Protocol};
 use async_trait::async_trait;
 use tokio::sync::broadcast;
 
@@ -45,7 +45,7 @@ pub trait Connection: Send + Sync {
     async fn disconnect(&mut self) -> Result<(), String>;
     async fn send(&mut self, event: ConnectionEvent) -> Result<(), String>;
     fn subscribe(&self) -> broadcast::Receiver<ConnectionEvent>;
-    fn protocol_name() -> String;
+    fn protocol_spec() -> Protocol;
 }
 
 pub mod mock;

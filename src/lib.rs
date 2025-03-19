@@ -84,8 +84,8 @@ pub enum ChannelType {
 
 #[derive(Clone, Debug)]
 pub struct Protocol {
-    pub name: &'static str,
-    pub auth_fields: Vec<AuthField>,
+    pub name: String,
+    pub auth: Option<AuthField>,
 }
 
 #[derive(Clone, Debug)]
