@@ -1,4 +1,4 @@
-use crate::{AuthField, Channel, Message, Protocol};
+use crate::{AuthField, Channel, Message, Profile, Protocol};
 use async_trait::async_trait;
 use tokio::sync::broadcast;
 
@@ -34,8 +34,23 @@ pub enum ChannelEvent {
 }
 
 #[derive(Clone)]
+pub enum UserEvent {
+    New {
+        user: Profile,
+    },
+    Update {
+        user_id: String,
+        new_user: Profile,
+    },
+    Remove {
+        user_id: String,
+    },
+}
+
+#[derive(Clone)]
 pub enum ConnectionEvent {
     Chat { event: ChatEvent },
+    User { event: UserEvent },
     Channel { event: ChannelEvent },
 }
 
