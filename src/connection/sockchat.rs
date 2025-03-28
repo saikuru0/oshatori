@@ -128,6 +128,7 @@ impl Connection for SockchatConnection {
                                 } => {
                                     let event = ConnectionEvent::User {
                                         event: UserEvent::New {
+                                            channel_id: current_channel.to_owned(),
                                             user: crate::Profile {
                                                 id: Some(user_id),
                                                 username: Some(username),
@@ -224,6 +225,7 @@ impl Connection for SockchatConnection {
                                 } => {
                                     let event = ConnectionEvent::User {
                                         event: UserEvent::New {
+                                            channel_id: current_channel.to_owned(),
                                             user: crate::Profile {
                                                 id: Some(user_id),
                                                 username: Some(username),
@@ -270,6 +272,7 @@ impl Connection for SockchatConnection {
                                     for context in contexts {
                                         let event = ConnectionEvent::User {
                                             event: UserEvent::New {
+                                                channel_id: current_channel.to_owned(),
                                                 user: crate::Profile {
                                                     id: Some(context.user_id),
                                                     username: Some(context.username),
@@ -337,7 +340,9 @@ impl Connection for SockchatConnection {
                                 }
                                 if packet.user_list {
                                     let event = ConnectionEvent::User {
-                                        event: UserEvent::ClearList,
+                                        event: UserEvent::ClearList {
+                                            channel_id: current_channel.to_owned(),
+                                        },
                                     };
                                     let _ = event_tx.send(event);
                                 }

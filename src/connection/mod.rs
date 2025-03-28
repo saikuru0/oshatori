@@ -53,10 +53,20 @@ pub enum ChannelEvent {
 
 #[derive(Clone, Debug)]
 pub enum UserEvent {
-    New { user: Profile },
-    Update { user_id: String, new_user: Profile },
-    Remove { user_id: String },
-    ClearList,
+    New {
+        channel_id: Option<String>,
+        user: Profile,
+    },
+    Update {
+        user_id: String,
+        new_user: Profile,
+    },
+    Remove {
+        user_id: String,
+    },
+    ClearList {
+        channel_id: Option<String>,
+    },
 }
 
 #[derive(Clone, Debug)]
