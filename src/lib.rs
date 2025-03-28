@@ -34,8 +34,8 @@ impl Default for Profile {
 
 #[derive(Clone, Debug)]
 pub struct Message {
-    pub id: String,
-    pub sender: Option<Profile>,
+    pub id: Option<String>,
+    pub sender_id: Option<String>,
     pub content: Vec<MessageFragment>,
     pub timestamp: DateTime<Utc>,
     pub message_type: MessageType,
@@ -85,7 +85,7 @@ pub enum ChannelType {
 #[derive(Clone, Debug)]
 pub struct Protocol {
     pub name: String,
-    pub auth: Option<AuthField>,
+    pub auth: Option<Vec<AuthField>>,
 }
 
 #[derive(Clone, Debug)]
@@ -97,7 +97,7 @@ pub struct AuthField {
 
 #[derive(Clone, Debug)]
 pub enum FieldValue {
-    Text(String),
-    Password(String),
+    Text(Option<String>),
+    Password(Option<String>),
     Group(Vec<AuthField>),
 }
