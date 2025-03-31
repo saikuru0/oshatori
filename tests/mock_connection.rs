@@ -1,7 +1,7 @@
 use chrono::Utc;
 use oshatori::{
-    connection::{ChatEvent, ConnectionEvent},
-    Connection, Message, MessageFragment, MessageStatus, MessageType, MockConnection,
+    connection::{ChatEvent, ConnectionEvent, MockConnection},
+    Connection, Message, MessageFragment, MessageStatus, MessageType,
 };
 
 #[tokio::test]
@@ -10,8 +10,8 @@ async fn test_mock_connection_integration() {
     let mut rx = conn.subscribe();
 
     let test_message = Message {
-        id: "random".to_string(),
-        sender: None,
+        id: None,
+        sender_id: None,
         content: vec![MessageFragment::Text("some text".to_string())],
         timestamp: Utc::now(),
         message_type: MessageType::Normal,
@@ -20,7 +20,7 @@ async fn test_mock_connection_integration() {
 
     conn.send(ConnectionEvent::Chat {
         event: ChatEvent::New {
-            channel_id: "random".to_string(),
+            channel_id: None,
             message: test_message.clone(),
         },
     })
@@ -35,7 +35,7 @@ async fn test_mock_connection_integration() {
             message,
         } = event
         {
-            assert_eq!(channel_id, "random");
+            assert_eq!(channel_id, None);
             match message.content.get(0) {
                 Some(fragment) => match fragment {
                     MessageFragment::Text(value) => {
