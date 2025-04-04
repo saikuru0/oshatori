@@ -1,3 +1,5 @@
+#![cfg(feature = "mock")]
+
 use chrono::Utc;
 use oshatori::{
     connection::{ChatEvent, ConnectionEvent, MockConnection},

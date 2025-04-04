@@ -1,3 +1,5 @@
+#![cfg(feature = "sockchat")]
+
 use chrono::Utc;
 use oshatori::{
     connection::{ChatEvent, ConnectionEvent, SockchatConnection},

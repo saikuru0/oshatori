@@ -1,8 +1,7 @@
 use chrono::prelude::*;
 
 pub mod connection;
-
-pub use connection::{Connection, MockConnection};
+pub use connection::Connection;
 
 #[derive(Clone, Debug)]
 pub struct Account {

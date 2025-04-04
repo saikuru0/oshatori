@@ -93,8 +93,12 @@ pub trait Connection: Send + Sync {
     fn protocol_spec() -> Protocol;
 }
 
+#[cfg(feature = "mock")]
 pub mod mock;
+#[cfg(feature = "mock")]
 pub use mock::MockConnection;
 
+#[cfg(feature = "sockchat")]
 pub mod sockchat;
+#[cfg(feature = "sockchat")]
 pub use sockchat::SockchatConnection;
