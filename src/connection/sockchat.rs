@@ -21,6 +21,7 @@ use url::Url;
 
 use super::{ChannelEvent, ChatEvent, ConnectionEvent, StatusEvent, UserEvent};
 
+#[derive(Clone, Debug)]
 pub struct SockchatConnection {
     sender: Option<tokio::sync::mpsc::Sender<WsMessage>>,
     receiver: Option<broadcast::Sender<ConnectionEvent>>,

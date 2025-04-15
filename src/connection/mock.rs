@@ -4,6 +4,7 @@ use tokio::sync::broadcast;
 
 use super::ConnectionEvent;
 
+#[derive(Clone, Debug)]
 pub struct MockConnection {
     event_tx: broadcast::Sender<ConnectionEvent>,
 }
