@@ -36,6 +36,9 @@ impl SockchatConnection {
     }
 }
 
+unsafe impl Send for SockchatConnection {}
+unsafe impl Sync for SockchatConnection {}
+
 #[async_trait]
 impl Connection for SockchatConnection {
     async fn connect(&mut self, auth: Vec<AuthField>) -> Result<(), String> {

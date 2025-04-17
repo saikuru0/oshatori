@@ -16,6 +16,9 @@ impl MockConnection {
     }
 }
 
+unsafe impl Send for MockConnection {}
+unsafe impl Sync for MockConnection {}
+
 #[async_trait]
 impl Connection for MockConnection {
     async fn connect(&mut self, _auth: Vec<AuthField>) -> Result<(), String> {
