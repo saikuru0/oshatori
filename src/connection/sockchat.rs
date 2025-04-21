@@ -45,22 +45,28 @@ impl Connection for SockchatConnection {
         let mut url = None;
         let mut token = None;
         let mut uid = None;
+        let mut pfp_url = None;
 
         for field in auth {
             match field.name.as_str() {
-                "URL" => {
+                "sockchat_url" => {
                     if let FieldValue::Text(Some(value)) = field.value {
                         url = Some(value);
                     }
                 }
-                "Token" => {
+                "token" => {
                     if let FieldValue::Password(Some(value)) = field.value {
                         token = Some(value);
                     }
                 }
-                "UID" => {
+                "uid" => {
                     if let FieldValue::Text(Some(value)) = field.value {
                         uid = Some(value);
+                    }
+                }
+                "pfp_url" => {
+                    if let FieldValue::Text(Some(value)) = field.value {
+                        pfp_url = Some(value);
                     }
                 }
                 _ => {}
@@ -452,19 +458,28 @@ impl Connection for SockchatConnection {
             name: "sockchat".to_string(),
             auth: Some(vec![
                 AuthField {
-                    name: "URL".to_string(),
+                    name: "sockchat_url".to_string(),
+                    display: Some("Sockchat URL".to_string()),
                     value: crate::FieldValue::Text(None),
                     required: true,
                 },
                 AuthField {
-                    name: "Token".to_string(),
+                    name: "token".to_string(),
+                    display: Some("User token".to_string()),
                     value: crate::FieldValue::Password(None),
                     required: true,
                 },
                 AuthField {
-                    name: "UID".to_string(),
+                    name: "uid".to_string(),
+                    display: Some("UID".to_string()),
                     value: crate::FieldValue::Text(None),
                     required: true,
+                },
+                AuthField {
+                    name: "pfp_url".to_string(),
+                    display: Some("Profile picture URL using {uid} to specify the user".to_string()),
+                    value: crate::FieldValue::Text(None),
+                    required: false,
                 },
             ]),
         }
