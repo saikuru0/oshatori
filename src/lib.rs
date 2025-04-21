@@ -90,6 +90,7 @@ pub struct Protocol {
 #[derive(Clone, Debug)]
 pub struct AuthField {
     pub name: String,
+    pub display: Option<String>,
     pub value: FieldValue,
     pub required: bool,
 }
