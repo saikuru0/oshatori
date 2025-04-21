@@ -16,17 +16,20 @@ async fn test_sockchat_connection_integration() {
 
     conn.connect(vec![
         oshatori::AuthField {
-            name: "URL".to_string(),
+            name: "sockchat_url".to_string(),
+            display: None,
             value: oshatori::FieldValue::Text(env::var("SOCKCHAT_URL").ok()),
             required: true,
         },
         oshatori::AuthField {
-            name: "Token".to_string(),
+            name: "token".to_string(),
+            display: None,
             value: oshatori::FieldValue::Password(env::var("SOCKCHAT_TOKEN").ok()),
             required: true,
         },
         oshatori::AuthField {
-            name: "UID".to_string(),
+            name: "uid".to_string(),
+            display: None,
             value: oshatori::FieldValue::Text(env::var("SOCKCHAT_UID").ok()),
             required: true,
         },
