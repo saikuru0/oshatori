@@ -25,7 +25,10 @@ fn frags_to_message(frags: &[Frag]) -> Vec<MessageFragment> {
                 let tag = name.to_lowercase();
                 match tag.as_str() {
                     "img" | "image" => {
-                        if let Some(url) = extract_raw(subfrags) {
+                        if let Some(mut url) = extract_raw(subfrags) {
+                            if url.starts_with("//") {
+                                url = format!("https:{}", &url);
+                            }
                             let mime = mime_from_extension(&url);
                             out.push(MessageFragment::Image { url, mime });
                         } else {
@@ -33,7 +36,10 @@ fn frags_to_message(frags: &[Frag]) -> Vec<MessageFragment> {
                         }
                     }
                     "video" => {
-                        if let Some(url) = extract_raw(subfrags) {
+                        if let Some(mut url) = extract_raw(subfrags) {
+                            if url.starts_with("//") {
+                                url = format!("https:{}", &url);
+                            }
                             let mime = mime_from_extension(&url);
                             out.push(MessageFragment::Video { url, mime });
                         } else {
@@ -41,7 +47,10 @@ fn frags_to_message(frags: &[Frag]) -> Vec<MessageFragment> {
                         }
                     }
                     "audio" => {
-                        if let Some(url) = extract_raw(subfrags) {
+                        if let Some(mut url) = extract_raw(subfrags) {
+                            if url.starts_with("//") {
+                                url = format!("https:{}", &url);
+                            }
                             let mime = mime_from_extension(&url);
                             out.push(MessageFragment::Audio { url, mime });
                         } else {
@@ -50,7 +59,10 @@ fn frags_to_message(frags: &[Frag]) -> Vec<MessageFragment> {
                     }
                     "url" => {
                         let link = val.clone().or_else(|| extract_raw(subfrags));
-                        if let Some(href) = link {
+                        if let Some(mut href) = link {
+                            if href.starts_with("//") {
+                                href = format!("https:{}", &href);
+                            }
                             out.push(MessageFragment::Url(href));
                         } else {
                             out.extend(frags_to_message(subfrags));
