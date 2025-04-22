@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 
 pub mod connection;
+pub mod utils;
 pub use connection::Connection;
 
 #[derive(Clone, Debug)]

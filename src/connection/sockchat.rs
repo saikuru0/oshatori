@@ -1,3 +1,4 @@
+use crate::utils::bbcode::parse_bbcode;
 use std::str::FromStr;
 
 use crate::{
@@ -136,6 +137,10 @@ impl Connection for SockchatConnection {
                                     user_permissions: _,
                                     sequence_id: _,
                                 } => {
+                                    let mut pic = None;
+                                    if let Some(pfp_format) = pfp_url.clone() {
+                                        pic = Some(pfp_format.replace("{uid}", user_id.as_str()));
+                                    }
                                     let event = ConnectionEvent::User {
                                         event: UserEvent::New {
                                             channel_id: current_channel.to_owned(),
@@ -144,7 +149,7 @@ impl Connection for SockchatConnection {
                                                 username: Some(username),
                                                 display_name: None,
                                                 color: None,
-                                                picture: None,
+                                                picture: pic,
                                             },
                                         },
                                     };
@@ -159,7 +164,7 @@ impl Connection for SockchatConnection {
                                         message: Message {
                                             id: Some(packet.sequence_id),
                                             sender_id: Some(packet.user_id),
-                                            content: vec![MessageFragment::Text(packet.message)],
+                                            content: parse_bbcode(packet.message.as_str()),
                                             timestamp: DateTime::from_timestamp_nanos(
                                                 packet.timestamp,
                                             ),
@@ -280,6 +285,13 @@ impl Connection for SockchatConnection {
                             ServerPacket::ContextInformation(packet) => match packet {
                                 ContextInformationPacket::ExistingUsers { count: _, contexts } => {
                                     for context in contexts {
+                                        let mut pic = None;
+                                        if let Some(pfp_format) = pfp_url.clone() {
+                                            pic = Some(
+                                                pfp_format
+                                                    .replace("{uid}", &context.user_id.as_str()),
+                                            );
+                                        }
                                         let event = ConnectionEvent::User {
                                             event: UserEvent::New {
                                                 channel_id: current_channel.to_owned(),
@@ -288,7 +300,7 @@ impl Connection for SockchatConnection {
                                                     username: Some(context.username),
                                                     display_name: None,
                                                     color: None,
-                                                    picture: None,
+                                                    picture: pic,
                                                 },
                                             },
                                         };
@@ -312,7 +324,7 @@ impl Connection for SockchatConnection {
                                             message: Message {
                                                 id: Some(sequence_id),
                                                 sender_id: Some(user_id),
-                                                content: vec![MessageFragment::Text(message)],
+                                                content: parse_bbcode(message.as_str()),
                                                 timestamp: DateTime::from_timestamp_nanos(
                                                     timestamp,
                                                 ),
@@ -376,6 +388,11 @@ impl Connection for SockchatConnection {
                             }
 
                             ServerPacket::UserUpdate(packet) => {
+                                let mut pic = None;
+                                if let Some(pfp_format) = pfp_url.clone() {
+                                    pic =
+                                        Some(pfp_format.replace("{uid}", &packet.user_id.as_str()));
+                                }
                                 let event = ConnectionEvent::User {
                                     event: UserEvent::Update {
                                         user_id: packet.user_id.to_owned(),
@@ -384,7 +401,7 @@ impl Connection for SockchatConnection {
                                             username: Some(packet.username),
                                             display_name: None,
                                             color: None,
-                                            picture: None,
+                                            picture: pic,
                                         },
                                     },
                                 };
@@ -477,7 +494,9 @@ impl Connection for SockchatConnection {
                 },
                 AuthField {
                     name: "pfp_url".to_string(),
-                    display: Some("Profile picture URL using {uid} to specify the user".to_string()),
+                    display: Some(
+                        "Profile picture URL using {uid} to specify the user".to_string(),
+                    ),
                     value: crate::FieldValue::Text(None),
                     required: false,
                 },
