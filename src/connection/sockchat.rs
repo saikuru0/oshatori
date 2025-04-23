@@ -2,8 +2,8 @@ use crate::utils::bbcode::parse_bbcode;
 use std::str::FromStr;
 
 use crate::{
-    AuthField, Channel, ChannelType, Connection, FieldValue, Message,
-    MessageStatus, MessageType, Profile, Protocol,
+    AuthField, Channel, ChannelType, Connection, FieldValue, Message, MessageStatus, MessageType,
+    Profile, Protocol,
 };
 use async_trait::async_trait;
 use chrono::DateTime;
@@ -97,8 +97,6 @@ impl Connection for SockchatConnection {
             },
         );
 
-        let _ = write.send(auth_packet.to_sockstr().into()).await;
-
         tokio::spawn(async move {
             let mut current_channel: Option<String> = None;
             while let Some(msg) = read.next().await {
@@ -115,9 +113,34 @@ impl Connection for SockchatConnection {
                             }
 
                             ServerPacket::JoinAuth(packet) => match packet {
-                                JoinAuthPacket::GoodAuth { .. } => {
+                                JoinAuthPacket::GoodAuth {
+                                    user_id,
+                                    username,
+                                    // color,
+                                    channel_name,
+                                    ..
+                                } => {
                                     let event = ConnectionEvent::Status {
                                         event: StatusEvent::Connected { artifact: None },
+                                    };
+                                    let _ = event_tx.send(event);
+
+                                    let mut pic = None;
+                                    if let Some(pfp_format) = pfp_url.clone() {
+                                        pic = Some(pfp_format.replace("{uid}", user_id.as_str()));
+                                    }
+
+                                    let event = ConnectionEvent::User {
+                                        event: UserEvent::New {
+                                            channel_id: Some(channel_name),
+                                            user: Profile {
+                                                id: Some(user_id),
+                                                username: Some(username),
+                                                display_name: None,
+                                                color: None,
+                                                picture: pic,
+                                            },
+                                        },
                                     };
                                     let _ = event_tx.send(event);
                                 }
@@ -412,6 +435,8 @@ impl Connection for SockchatConnection {
                 }
             }
         });
+
+        let _ = write.send(auth_packet.to_sockstr().into()).await;
 
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
