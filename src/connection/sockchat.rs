@@ -116,7 +116,7 @@ impl Connection for SockchatConnection {
                                 JoinAuthPacket::GoodAuth {
                                     user_id,
                                     username,
-                                    // color,
+                                    color,
                                     channel_name,
                                     ..
                                 } => {
@@ -137,7 +137,7 @@ impl Connection for SockchatConnection {
                                                 id: Some(user_id),
                                                 username: Some(username),
                                                 display_name: None,
-                                                color: None,
+                                                color: Some(color),
                                                 picture: pic,
                                             },
                                         },
