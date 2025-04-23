@@ -1,8 +1,9 @@
 use crate::{AuthField, Channel, Message, Profile, Protocol};
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChatEvent {
     New {
         channel_id: Option<String>,
@@ -19,7 +20,7 @@ pub enum ChatEvent {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChannelEvent {
     New {
         channel: Channel,
@@ -51,7 +52,7 @@ pub enum ChannelEvent {
     ClearList,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum UserEvent {
     New {
         channel_id: Option<String>,
@@ -69,14 +70,14 @@ pub enum UserEvent {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum StatusEvent {
     Ping { artifact: Option<String> },
     Connected { artifact: Option<String> },
     Disconnected { artifact: Option<String> },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ConnectionEvent {
     Chat { event: ChatEvent },
     User { event: UserEvent },

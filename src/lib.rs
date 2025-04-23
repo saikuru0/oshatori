@@ -3,15 +3,16 @@ use chrono::prelude::*;
 pub mod connection;
 pub mod utils;
 pub use connection::Connection;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Account {
     pub auth: Vec<AuthField>,
     pub protocol_name: String,
     pub private_profile: Option<Profile>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Profile {
     pub id: Option<String>,
     pub username: Option<String>,
@@ -32,7 +33,7 @@ impl Default for Profile {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Message {
     pub id: Option<String>,
     pub sender_id: Option<String>,
@@ -42,7 +43,7 @@ pub struct Message {
     pub status: MessageStatus,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MessageStatus {
     Sent,
     Delivered,
@@ -51,7 +52,7 @@ pub enum MessageStatus {
     Failed,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MessageType {
     CurrentUser,
     Normal,
@@ -59,7 +60,7 @@ pub enum MessageType {
     Meta,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum MessageFragment {
     Text(String),
     Image { url: String, mime: String },
@@ -68,27 +69,27 @@ pub enum MessageFragment {
     Url(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Channel {
     pub id: String,
     pub name: Option<String>,
     pub channel_type: ChannelType,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ChannelType {
     Group,
     Direct,
     Broadcast,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Protocol {
     pub name: String,
     pub auth: Option<Vec<AuthField>>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AuthField {
     pub name: String,
     pub display: Option<String>,
@@ -96,7 +97,7 @@ pub struct AuthField {
     pub required: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum FieldValue {
     Text(Option<String>),
     Password(Option<String>),
