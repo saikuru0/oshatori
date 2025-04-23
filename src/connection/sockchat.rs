@@ -2,7 +2,7 @@ use crate::utils::bbcode::parse_bbcode;
 use std::str::FromStr;
 
 use crate::{
-    AuthField, Channel, ChannelType, Connection, FieldValue, Message, MessageFragment,
+    AuthField, Channel, ChannelType, Connection, FieldValue, Message,
     MessageStatus, MessageType, Profile, Protocol,
 };
 use async_trait::async_trait;
