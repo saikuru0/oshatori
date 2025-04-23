@@ -1,4 +1,4 @@
-use crate::utils::bbcode::parse_bbcode;
+use crate::utils::{bbcode::parse_bbcode, color::kanii_to_rgba};
 use std::str::FromStr;
 
 use crate::{
@@ -137,7 +137,7 @@ impl Connection for SockchatConnection {
                                                 id: Some(user_id),
                                                 username: Some(username),
                                                 display_name: None,
-                                                color: Some(color),
+                                                color: kanii_to_rgba(color),
                                                 picture: pic,
                                             },
                                         },
@@ -156,7 +156,7 @@ impl Connection for SockchatConnection {
                                     timestamp: _,
                                     user_id,
                                     username,
-                                    color: _,
+                                    color,
                                     user_permissions: _,
                                     sequence_id: _,
                                 } => {
@@ -171,7 +171,7 @@ impl Connection for SockchatConnection {
                                                 id: Some(user_id),
                                                 username: Some(username),
                                                 display_name: None,
-                                                color: None,
+                                                color: kanii_to_rgba(color),
                                                 picture: pic,
                                             },
                                         },
@@ -257,7 +257,7 @@ impl Connection for SockchatConnection {
                                 ChannelSwitchingPacket::Join {
                                     user_id,
                                     username,
-                                    color: _,
+                                    color,
                                     user_permissions: _,
                                     sequence_id: _,
                                 } => {
@@ -268,7 +268,7 @@ impl Connection for SockchatConnection {
                                                 id: Some(user_id),
                                                 username: Some(username),
                                                 display_name: None,
-                                                color: None,
+                                                color: kanii_to_rgba(color),
                                                 picture: None,
                                             },
                                         },
@@ -322,7 +322,7 @@ impl Connection for SockchatConnection {
                                                     id: Some(context.user_id),
                                                     username: Some(context.username),
                                                     display_name: None,
-                                                    color: None,
+                                                    color: kanii_to_rgba(context.color),
                                                     picture: pic,
                                                 },
                                             },
@@ -423,7 +423,7 @@ impl Connection for SockchatConnection {
                                             id: Some(packet.user_id),
                                             username: Some(packet.username),
                                             display_name: None,
-                                            color: None,
+                                            color: kanii_to_rgba(packet.color),
                                             picture: pic,
                                         },
                                     },
