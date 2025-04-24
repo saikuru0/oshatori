@@ -520,7 +520,7 @@ dependencies = [
 [[package]]
 name = "kanii-lib"
 version = "0.1.0"
-source = "git+https://github.com/saikuru0/kanii-lib#b8321315565a723b5b9bdf4b94aa8683a35daa95"
+source = "git+https://github.com/saikuru0/kanii-lib#d9c58e3472108792c4a1d898800877564cad8f43"
 dependencies = [
  "csscolorparser",
 ]
