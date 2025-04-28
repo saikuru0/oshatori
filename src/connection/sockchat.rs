@@ -202,6 +202,7 @@ impl Connection for SockchatConnection {
                             ServerPacket::UserDisconnect(packet) => {
                                 let event = ConnectionEvent::User {
                                     event: UserEvent::Remove {
+                                        channel_id: current_channel.to_owned(),
                                         user_id: packet.user_id,
                                     },
                                 };
@@ -280,7 +281,7 @@ impl Connection for SockchatConnection {
                                     sequence_id: _,
                                 } => {
                                     let event = ConnectionEvent::User {
-                                        event: UserEvent::Remove { user_id },
+                                        event: UserEvent::Remove { user_id, channel_id: current_channel.to_owned() },
                                     };
                                     let _ = event_tx.send(event);
                                 }
@@ -418,6 +419,7 @@ impl Connection for SockchatConnection {
                                 }
                                 let event = ConnectionEvent::User {
                                     event: UserEvent::Update {
+                                        channel_id: current_channel.to_owned(),
                                         user_id: packet.user_id.to_owned(),
                                         new_user: Profile {
                                             id: Some(packet.user_id),

@@ -59,10 +59,12 @@ pub enum UserEvent {
         user: Profile,
     },
     Update {
+        channel_id: Option<String>,
         user_id: String,
         new_user: Profile,
     },
     Remove {
+        channel_id: Option<String>,
         user_id: String,
     },
     ClearList {
