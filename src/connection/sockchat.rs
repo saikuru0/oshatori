@@ -1,4 +1,4 @@
-use crate::utils::{bbcode::parse_bbcode, color::kanii_to_rgba};
+use crate::utils::{bbcode::parse_bbcode, color::kanii_to_rgba, html::parse_html};
 use std::str::FromStr;
 
 use crate::{
@@ -101,7 +101,7 @@ impl Connection for SockchatConnection {
             let mut current_channel: Option<String> = None;
             while let Some(msg) = read.next().await {
                 if let Ok(msg) = msg {
-                    if let Ok(sockpacket) = ServerPacket::from_str(msg.to_string().as_str()) {
+                    if let Ok(sockpacket) = ServerPacket::from_str(parse_html(msg.to_string()).as_str()) {
                         match sockpacket {
                             ServerPacket::Pong(packet) => {
                                 let event = ConnectionEvent::Status {

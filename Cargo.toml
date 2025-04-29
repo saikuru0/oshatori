@@ -15,6 +15,7 @@ tokio-tungstenite = { version = "0.26.2", features = ["native-tls"], optional = 
 url = { version = "2.5.4", optional = true }
 dotenvy = { version = "0.15.7", optional = true }
 hhkodo = { git = "https://github.com/saikuru0/88kodo", version = "0.1.0" }
+regex = "1.11.1"
 
 [features]
 default = ["mock", "sockchat"]
