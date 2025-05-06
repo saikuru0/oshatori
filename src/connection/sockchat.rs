@@ -101,7 +101,9 @@ impl Connection for SockchatConnection {
             let mut current_channel: Option<String> = None;
             while let Some(msg) = read.next().await {
                 if let Ok(msg) = msg {
-                    if let Ok(sockpacket) = ServerPacket::from_str(parse_html(msg.to_string()).as_str()) {
+                    if let Ok(sockpacket) =
+                        ServerPacket::from_str(parse_html(msg.to_string()).as_str())
+                    {
                         match sockpacket {
                             ServerPacket::Pong(packet) => {
                                 let event = ConnectionEvent::Status {
@@ -189,7 +191,7 @@ impl Connection for SockchatConnection {
                                             sender_id: Some(packet.user_id),
                                             content: parse_bbcode(packet.message.as_str()),
                                             timestamp: DateTime::from_timestamp_nanos(
-                                                packet.timestamp,
+                                                packet.timestamp * 1_000_000_000,
                                             ),
                                             message_type: MessageType::Normal,
                                             status: MessageStatus::Delivered,
@@ -281,7 +283,10 @@ impl Connection for SockchatConnection {
                                     sequence_id: _,
                                 } => {
                                     let event = ConnectionEvent::User {
-                                        event: UserEvent::Remove { user_id, channel_id: current_channel.to_owned() },
+                                        event: UserEvent::Remove {
+                                            user_id,
+                                            channel_id: current_channel.to_owned(),
+                                        },
                                     };
                                     let _ = event_tx.send(event);
                                 }
