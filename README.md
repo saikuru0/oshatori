@@ -1,6 +1,12 @@
-<h1 align="center"> 🐦 oshatori</h1>
-
-> oshatori is a multi-protocol simultaneous chat library for Rust
+<br />
+<div align="center">
+  <img src="./oshatori_banner.svg" alt="oshatori">
+  <p>
+    <strong>
+      A versatile multi-protocol chat library
+    </strong>
+  </p>
+</div>
 
 > [!WARNING]
 > This library is in its early stages and the core structure

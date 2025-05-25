@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="111.45963mm"
+   height="29.99972mm"
+   viewBox="0 0 111.45963 29.99972"
+   version="1.1"
+   id="svg1"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1">
+    <rect
+       x="342.47424"
+       y="120.19988"
+       width="414.29297"
+       height="111.9333"
+       id="rect1" />
+    <linearGradient
+       id="linearGradient8">
+      <stop
+         style="stop-color:#c0c500;stop-opacity:1;"
+         offset="0"
+         id="stop7" />
+      <stop
+         style="stop-color:#550000;stop-opacity:0;"
+         offset="1"
+         id="stop8" />
+    </linearGradient>
+    <linearGradient
+       xlink:href="#linearGradient8"
+       id="linearGradient9"
+       gradientUnits="userSpaceOnUse"
+       x1="173.75003"
+       y1="104.17463"
+       x2="161.24997"
+       y2="125.82537"
+       gradientTransform="translate(-30.000167,-40.000102)" />
+  </defs>
+  <g
+     id="layer1"
+     transform="translate(-70.481353,-22.544032)">
+    <g
+       id="g1">
+      <g
+         id="g9"
+         style="mix-blend-mode:normal"
+         transform="translate(-54.581374,-37.455965)">
+        <g
+           id="g6-7"
+           transform="translate(-30.000167,-40.000102)">
+          <path
+             id="path1-3-9-6-6"
+             style="fill:#550000;fill-opacity:1;stroke:none;stroke-width:1.05833;stroke-linecap:round;stroke-linejoin:round"
+             d="m 175.00017,100.0001 c 0,0 -10.00042,-1e-4 -10.00042,9.9999 v 5.00022 4.99969 9.99991 c 0,0 10.00042,9e-5 10.00042,-9.99991 V 115.00022 110 Z" />
+          <path
+             style="fill:#800000;stroke:none;stroke-width:1.05833;stroke-linecap:round;stroke-linejoin:round"
+             d="m 165.0631,120 c -10,0 -10,-10 -10,-10 h 20 z"
+             id="path1-5-3-5" />
+        </g>
+        <path
+           id="rect5-6"
+           style="mix-blend-mode:screen;fill:url(#linearGradient9);stroke:none;stroke-width:1.05833;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1"
+           d="m 145.00001,59.999998 c 0,0 -10.00042,-10e-5 -10.00042,9.9999 h -9.93686 c 0,0 2.1e-4,9.95777 9.93686,9.99991 v 9.99991 c 0,0 10.00042,9e-5 10.00042,-9.99991 v -4.99969 -4.93717 l 0.0631,-0.06305 h -0.0631 z" />
+      </g>
+      <text
+         xml:space="preserve"
+         transform="matrix(0.26458333,0,0,0.26458333,5.7582098,-7.1596801)"
+         id="text1"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:85.3333px;font-family:'URW Gothic';-inkscape-font-specification:'URW Gothic, Semi-Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;text-align:start;writing-mode:lr-tb;direction:ltr;white-space:pre;shape-inside:url(#rect1);fill:#bc7682;fill-opacity:1;stroke-width:4;stroke-linecap:round;stroke-linejoin:round"><tspan
+           x="342.47461"
+           y="193.92719"
+           id="tspan2">oshatori</tspan></text>
+    </g>
+  </g>
+</svg>
