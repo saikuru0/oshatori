@@ -1,4 +1,4 @@
-use crate::{AuthField, Channel, Message, Profile, Protocol};
+use crate::{Asset, AuthField, Channel, Message, Profile, Protocol};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
@@ -80,11 +80,32 @@ pub enum StatusEvent {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AssetEvent {
+    New {
+        channel_id: Option<String>,
+        asset: Asset,
+    },
+    Update {
+        channel_id: Option<String>,
+        asset_id: String,
+        new_asset: Asset,
+    },
+    Remove {
+        channel_id: Option<String>,
+        asset_id: String,
+    },
+    ClearList {
+        channel_id: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum ConnectionEvent {
     Chat { event: ChatEvent },
     User { event: UserEvent },
     Channel { event: ChannelEvent },
     Status { event: StatusEvent },
+    Asset { event: AssetEvent },
 }
 
 #[async_trait]
