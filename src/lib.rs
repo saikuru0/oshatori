@@ -70,6 +70,41 @@ pub enum MessageFragment {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Asset {
+    Emote {
+        id: Option<String>,
+        keys: Vec<String>,
+        src: String,
+        source: AssetSource,
+    },
+    Sticker {
+        id: Option<String>,
+        keys: Vec<String>,
+        src: String,
+        source: AssetSource,
+    },
+    Audio {
+        id: Option<String>,
+        keys: Vec<String>,
+        src: String,
+        source: AssetSource,
+    },
+    Command {
+        id: Option<String>,
+        keys: Vec<String>,
+        args: Vec<MessageFragment>,
+        source: AssetSource,
+    },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum AssetSource {
+    User,
+    Meta,
+    Server,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Channel {
     pub id: String,
     pub name: Option<String>,
@@ -103,3 +138,6 @@ pub enum FieldValue {
     Password(Option<String>),
     Group(Vec<AuthField>),
 }
+
+#[cfg(feature = "client")]
+pub mod client;
