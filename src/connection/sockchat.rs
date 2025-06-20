@@ -1,9 +1,10 @@
-use crate::utils::{bbcode::parse_bbcode, color::kanii_to_rgba, html::parse_html};
 use std::str::FromStr;
 
 use crate::{
-    AuthField, Channel, ChannelType, Connection, FieldValue, Message, MessageStatus, MessageType,
-    Profile, Protocol,
+    connection::{AssetEvent, ChannelEvent, ChatEvent, ConnectionEvent, StatusEvent, UserEvent},
+    utils::{assets::parse_assets, bbcode::parse_bbcode, color::kanii_to_rgba, html::parse_html},
+    Asset, AssetSource, AuthField, Channel, ChannelType, Connection, FieldValue, Message,
+    MessageStatus, MessageType, Profile, Protocol,
 };
 use async_trait::async_trait;
 use chrono::DateTime;
@@ -20,12 +21,11 @@ use tokio::sync::broadcast;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use url::Url;
 
-use super::{ChannelEvent, ChatEvent, ConnectionEvent, StatusEvent, UserEvent};
-
 #[derive(Clone, Debug)]
 pub struct SockchatConnection {
     sender: Option<tokio::sync::mpsc::Sender<WsMessage>>,
     receiver: Option<broadcast::Sender<ConnectionEvent>>,
+    assets: Vec<Asset>,
 }
 
 impl SockchatConnection {
@@ -33,6 +33,7 @@ impl SockchatConnection {
         SockchatConnection {
             sender: None,
             receiver: None,
+            assets: Vec::new(),
         }
     }
 }
@@ -47,6 +48,8 @@ impl Connection for SockchatConnection {
         let mut token = None;
         let mut uid = None;
         let mut pfp_url = None;
+        let mut asset_api = None;
+        let available_assets = Vec::new();
 
         for field in auth {
             match field.name.as_str() {
@@ -70,6 +73,11 @@ impl Connection for SockchatConnection {
                         pfp_url = Some(value);
                     }
                 }
+                "asset_api" => {
+                    if let FieldValue::Text(Some(value)) = field.value {
+                        asset_api = Some(value);
+                    }
+                }
                 _ => {}
             }
         }
@@ -89,6 +97,76 @@ impl Connection for SockchatConnection {
 
         self.sender = Some(tx);
         self.receiver = Some(event_tx.clone());
+        self.assets = available_assets.clone();
+
+        if let Some(mut api) = asset_api {
+            if api.ends_with('/') {
+                api.pop();
+            }
+            match reqwest::Client::new()
+                .get(format!("{}/{}", api, "emotes"))
+                .query(&[("fields", "uri,strings,min_rank")])
+                .send()
+                .await
+            {
+                Ok(response) => {
+                    if response.status().is_success() {
+                        match response.text().await {
+                            Ok(text) => {
+                                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                                    if let Some(emotes) = json.as_array() {
+                                        for emote in emotes {
+                                            if let (Some(uri), Some(strings)) =
+                                                (emote.get("uri"), emote.get("strings"))
+                                            {
+                                                if let (Some(uri_str), Some(strings_array)) =
+                                                    (uri.as_str(), strings.as_array())
+                                                {
+                                                    let keys: Vec<String> = strings_array
+                                                        .iter()
+                                                        .filter_map(|s| {
+                                                            s.as_str().map(|s| s.to_string())
+                                                        })
+                                                        .collect();
+
+                                                    if !keys.is_empty() {
+                                                        let escaped_keys: Vec<String> = keys
+                                                            .iter()
+                                                            .map(|k| regex::escape(k))
+                                                            .collect();
+                                                        let pattern = format!(
+                                                            r":(?:{}):",
+                                                            escaped_keys.join("|")
+                                                        );
+
+                                                        let id = keys.first().cloned();
+
+                                                        let asset = Asset::Emote {
+                                                            id,
+                                                            pattern,
+                                                            src: uri_str.to_string(),
+                                                            source: AssetSource::Server,
+                                                        };
+
+                                                        self.assets.push(asset.clone());
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                dbg!(e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    dbg!(e);
+                }
+            }
+        }
 
         let auth_packet = ClientPacket::Authentication(
             kanii_lib::packets::client::authentication::AuthenticationPacket {
@@ -97,8 +175,10 @@ impl Connection for SockchatConnection {
             },
         );
 
+        let channel_assets = self.assets.clone();
         tokio::spawn(async move {
             let mut current_channel: Option<String> = None;
+            let mut assets_sent = false;
             while let Some(msg) = read.next().await {
                 if let Ok(msg) = msg {
                     if let Ok(sockpacket) =
@@ -145,6 +225,19 @@ impl Connection for SockchatConnection {
                                         },
                                     };
                                     let _ = event_tx.send(event);
+
+                                    if !assets_sent && !channel_assets.is_empty() {
+                                        for asset in &channel_assets {
+                                            let asset_event = AssetEvent::New {
+                                                channel_id: None,
+                                                asset: asset.clone(),
+                                            };
+                                            let connection_event =
+                                                ConnectionEvent::Asset { event: asset_event };
+                                            let _ = event_tx.send(connection_event);
+                                        }
+                                        assets_sent = true;
+                                    }
                                 }
                                 JoinAuthPacket::BadAuth { reason, timestamp } => {
                                     let event = ConnectionEvent::Status {
@@ -183,13 +276,26 @@ impl Connection for SockchatConnection {
                             },
 
                             ServerPacket::ChatMessage(packet) => {
+                                let content = parse_bbcode(packet.message.as_str());
+
+                                let mut parsed_content = Vec::new();
+                                for fragment in content {
+                                    match fragment {
+                                        crate::MessageFragment::Text(text) => {
+                                            let asset_parsed = parse_assets(&text, &channel_assets);
+                                            parsed_content.extend(asset_parsed);
+                                        }
+                                        other => parsed_content.push(other),
+                                    }
+                                }
+
                                 let event = ConnectionEvent::Chat {
                                     event: ChatEvent::New {
                                         channel_id: current_channel.clone(),
                                         message: Message {
                                             id: Some(packet.sequence_id),
                                             sender_id: Some(packet.user_id),
-                                            content: parse_bbcode(packet.message.as_str()),
+                                            content: parsed_content,
                                             timestamp: DateTime::from_timestamp_nanos(
                                                 packet.timestamp * 1_000_000_000,
                                             ),
@@ -350,15 +456,33 @@ impl Connection for SockchatConnection {
                                     let event = ConnectionEvent::Chat {
                                         event: ChatEvent::New {
                                             channel_id: current_channel.clone(),
-                                            message: Message {
-                                                id: Some(sequence_id),
-                                                sender_id: Some(user_id),
-                                                content: parse_bbcode(message.as_str()),
-                                                timestamp: DateTime::from_timestamp_nanos(
-                                                    timestamp,
-                                                ),
-                                                message_type: MessageType::Normal,
-                                                status: MessageStatus::Delivered,
+                                            message: {
+                                                let content = parse_bbcode(message.as_str());
+
+                                                let mut parsed_content = Vec::new();
+                                                for fragment in content {
+                                                    match fragment {
+                                                        crate::MessageFragment::Text(text) => {
+                                                            let asset_parsed = parse_assets(
+                                                                &text,
+                                                                &channel_assets,
+                                                            );
+                                                            parsed_content.extend(asset_parsed);
+                                                        }
+                                                        other => parsed_content.push(other),
+                                                    }
+                                                }
+
+                                                Message {
+                                                    id: Some(sequence_id),
+                                                    sender_id: Some(user_id),
+                                                    content: parsed_content,
+                                                    timestamp: DateTime::from_timestamp_nanos(
+                                                        timestamp,
+                                                    ),
+                                                    message_type: MessageType::Normal,
+                                                    status: MessageStatus::Delivered,
+                                                }
                                             },
                                         },
                                     };
@@ -502,7 +626,7 @@ impl Connection for SockchatConnection {
         self.receiver.as_ref().unwrap().subscribe()
     }
 
-    fn protocol_spec() -> Protocol {
+    fn protocol_spec(&self) -> Protocol {
         Protocol {
             name: "sockchat".to_string(),
             auth: Some(vec![
@@ -529,6 +653,12 @@ impl Connection for SockchatConnection {
                     display: Some(
                         "Profile picture URL using {uid} to specify the user".to_string(),
                     ),
+                    value: crate::FieldValue::Text(None),
+                    required: false,
+                },
+                AuthField {
+                    name: "asset_api".to_string(),
+                    display: Some("URL of the Mami-compatible asset API".to_string()),
                     value: crate::FieldValue::Text(None),
                     required: false,
                 },

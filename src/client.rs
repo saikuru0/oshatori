@@ -104,34 +104,49 @@ impl StateClient {
         let accounts_arc = Arc::clone(&self.accounts);
         let acc_clone = *acc_id;
         spawn(async move {
-            while let Ok(event) = rx.recv().await {
-                let key: Option<String> = match &event {
-                    ConnectionEvent::Chat { event: e } => e.channel_id().clone(),
-                    ConnectionEvent::User { event: e } => e.channel_id().clone(),
-                    ConnectionEvent::Asset { event: e } => e.channel_id().clone(),
-                    ConnectionEvent::Channel { event: e } => match e {
-                        ChannelEvent::New { channel } => Some(channel.id.clone()),
-                        ChannelEvent::Update { channel_id, .. }
-                        | ChannelEvent::Remove { channel_id }
-                        | ChannelEvent::Join { channel_id }
-                        | ChannelEvent::Leave { channel_id }
-                        | ChannelEvent::Switch { channel_id } => Some(channel_id.clone()),
-                        ChannelEvent::Kick { channel_id, .. }
-                        | ChannelEvent::Wipe { channel_id } => channel_id.clone(),
-                        ChannelEvent::ClearList => None,
-                    },
-                    ConnectionEvent::Status { .. } => None,
-                };
+            use tokio::sync::broadcast::error::RecvError;
+            loop {
+                match rx.recv().await {
+                    Ok(event) => {
+                        let key: Option<String> = match &event {
+                            ConnectionEvent::Chat { event: e } => e.channel_id().clone(),
+                            ConnectionEvent::User { event: e } => e.channel_id().clone(),
+                            ConnectionEvent::Asset { event: e } => e.channel_id().clone(),
+                            ConnectionEvent::Channel { event: e } => match e {
+                                ChannelEvent::New { channel } => Some(channel.id.clone()),
+                                ChannelEvent::Update { channel_id, .. }
+                                | ChannelEvent::Remove { channel_id }
+                                | ChannelEvent::Join { channel_id }
+                                | ChannelEvent::Leave { channel_id }
+                                | ChannelEvent::Switch { channel_id } => Some(channel_id.clone()),
+                                ChannelEvent::Kick { channel_id, .. }
+                                | ChannelEvent::Wipe { channel_id } => channel_id.clone(),
+                                ChannelEvent::ClearList => None,
+                            },
+                            ConnectionEvent::Status { .. } => None,
+                        };
 
-                let mut accounts = accounts_arc.write().await;
-                if let Some(ac) = accounts.get_mut(&acc_clone) {
-                    let state_map = ac.channel_states.get_mut(&cid).unwrap();
-                    let ch_state = state_map.entry(key.clone()).or_default();
-                    match event {
-                        ConnectionEvent::Chat { event } => ch_state.chat_history.push_back(event),
-                        ConnectionEvent::User { event } => ch_state.user_list.push(event),
-                        ConnectionEvent::Asset { event } => ch_state.asset_list.push(event),
-                        _ => {}
+                        let mut accounts = accounts_arc.write().await;
+                        if let Some(ac) = accounts.get_mut(&acc_clone) {
+                            let state_map = ac.channel_states.get_mut(&cid).unwrap();
+                            let ch_state = state_map.entry(key.clone()).or_default();
+                            match event {
+                                ConnectionEvent::Chat { event } => {
+                                    ch_state.chat_history.push_back(event)
+                                }
+                                ConnectionEvent::User { event } => ch_state.user_list.push(event),
+                                ConnectionEvent::Asset { event } => {
+                                    ch_state.asset_list.push(event);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    Err(RecvError::Lagged(_)) => {
+                        continue;
+                    }
+                    Err(RecvError::Closed) => {
+                        break;
                     }
                 }
             }

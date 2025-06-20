@@ -38,7 +38,7 @@ impl Connection for MockConnection {
         self.event_tx.subscribe()
     }
 
-    fn protocol_spec() -> Protocol {
+    fn protocol_spec(&self) -> Protocol {
         Protocol {
             name: "Mock".to_string(),
             auth: None,

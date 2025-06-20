@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ChatEvent {
     New {
         channel_id: Option<String>,
@@ -20,7 +20,7 @@ pub enum ChatEvent {
     },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ChannelEvent {
     New {
         channel: Channel,
@@ -52,7 +52,7 @@ pub enum ChannelEvent {
     ClearList,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum UserEvent {
     New {
         channel_id: Option<String>,
@@ -72,14 +72,14 @@ pub enum UserEvent {
     },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum StatusEvent {
     Ping { artifact: Option<String> },
     Connected { artifact: Option<String> },
     Disconnected { artifact: Option<String> },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum AssetEvent {
     New {
         channel_id: Option<String>,
@@ -99,7 +99,7 @@ pub enum AssetEvent {
     },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ConnectionEvent {
     Chat { event: ChatEvent },
     User { event: UserEvent },
@@ -114,7 +114,7 @@ pub trait Connection: Send + Sync {
     async fn disconnect(&mut self) -> Result<(), String>;
     async fn send(&mut self, event: ConnectionEvent) -> Result<(), String>;
     fn subscribe(&self) -> broadcast::Receiver<ConnectionEvent>;
-    fn protocol_spec() -> Protocol;
+    fn protocol_spec(&self) -> Protocol;
 }
 
 #[cfg(feature = "mock")]

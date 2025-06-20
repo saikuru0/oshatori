@@ -3,6 +3,7 @@ pub mod connection;
 pub mod utils;
 pub use connection::Connection;
 use serde::{Deserialize, Serialize};
+pub use utils::assets;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Account {
@@ -66,31 +67,32 @@ pub enum MessageFragment {
     Video { url: String, mime: String },
     Audio { url: String, mime: String },
     Url(String),
+    AssetId(String),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Asset {
     Emote {
         id: Option<String>,
-        keys: Vec<String>,
+        pattern: String,
         src: String,
         source: AssetSource,
     },
     Sticker {
         id: Option<String>,
-        keys: Vec<String>,
+        pattern: String,
         src: String,
         source: AssetSource,
     },
     Audio {
         id: Option<String>,
-        keys: Vec<String>,
+        pattern: String,
         src: String,
         source: AssetSource,
     },
     Command {
         id: Option<String>,
-        keys: Vec<String>,
+        pattern: String,
         args: Vec<MessageFragment>,
         source: AssetSource,
     },
