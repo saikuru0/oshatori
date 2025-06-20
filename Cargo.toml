@@ -8,16 +8,27 @@ async-trait = "0.1.83"
 chrono = { version = "0.4.39", features = ["serde"] }
 serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.133"
-tokio = { version = "1.42.0", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.42.0", features = [
+    "macros",
+    "rt-multi-thread",
+    "sync",
+    "time",
+] }
 kanii-lib = { git = "https://github.com/saikuru0/kanii-lib", optional = true }
 futures-util = "0.3.31"
-tokio-tungstenite = { version = "0.26.2", features = ["native-tls"], optional = true }
+tokio-tungstenite = { version = "0.26.2", features = [
+    "native-tls",
+], optional = true }
 url = { version = "2.5.4", optional = true }
 dotenvy = { version = "0.15.7", optional = true }
 hhkodo = { git = "https://github.com/saikuru0/88kodo", version = "0.1.0" }
 regex = "1.11.1"
+reqwest = "0.12.20"
+uuid = { version = "1.17.0", features = ["v4"] }
+tokio-util = "0.7.15"
 
 [features]
-default = ["mock", "sockchat"]
+default = ["mock", "sockchat", "client"]
 mock = []
 sockchat = ["dep:kanii-lib", "dep:tokio-tungstenite", "dep:url", "dep:dotenvy"]
+client = []

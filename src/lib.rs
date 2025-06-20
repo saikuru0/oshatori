@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-
 pub mod connection;
 pub mod utils;
 pub use connection::Connection;
@@ -60,7 +59,7 @@ pub enum MessageType {
     Meta,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub enum MessageFragment {
     Text(String),
     Image { url: String, mime: String },
@@ -141,3 +140,5 @@ pub enum FieldValue {
 
 #[cfg(feature = "client")]
 pub mod client;
+#[cfg(feature = "client")]
+pub use client::*;
