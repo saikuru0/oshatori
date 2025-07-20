@@ -9,7 +9,7 @@ use std::env;
 use tokio::{sync::broadcast::error::RecvError, time::Duration};
 
 #[tokio::test]
-async fn test_sockchat_connection_integration() {
+async fn sockchat_connection() {
     let _ = dotenvy::dotenv();
 
     let mut conn = SockchatConnection::new();
@@ -72,4 +72,62 @@ async fn test_sockchat_connection_integration() {
     }
 
     conn.disconnect().await.expect("failed to disconnect");
+}
+
+#[tokio::test]
+async fn sockchat_assets() {
+    use oshatori::{AuthField, FieldValue};
+    use tokio::time::sleep;
+
+    let _ = dotenvy::dotenv();
+
+    let mut conn = SockchatConnection::new();
+    conn.set_auth(vec![
+        AuthField {
+            name: "sockchat_url".into(),
+            display: None,
+            value: FieldValue::Text(std::env::var("SOCKCHAT_URL").ok()),
+            required: true,
+        },
+        AuthField {
+            name: "token".into(),
+            display: None,
+            value: FieldValue::Password(std::env::var("SOCKCHAT_TOKEN").ok()),
+            required: true,
+        },
+        AuthField {
+            name: "uid".into(),
+            display: None,
+            value: FieldValue::Text(std::env::var("SOCKCHAT_UID").ok()),
+            required: true,
+        },
+        AuthField {
+            name: "asset_api".into(),
+            display: None,
+            value: FieldValue::Text(std::env::var("ASSET_API").ok()),
+            required: false,
+        },
+    ])
+    .unwrap();
+
+    let mut rx = conn.subscribe();
+
+    conn.connect().await.unwrap();
+
+    sleep(Duration::from_millis(400)).await;
+
+    for _ in 0..24 {
+        let mut received = rx.recv().await;
+        while let Err(RecvError::Lagged(_)) = received {
+            received = rx.recv().await;
+        }
+        match received.unwrap() {
+            ConnectionEvent::Asset { event } => {
+                dbg!(event);
+            }
+            _ => {}
+        }
+    }
+
+    conn.disconnect().await.unwrap();
 }
