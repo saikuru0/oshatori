@@ -139,8 +139,3 @@ pub enum FieldValue {
     Password(Option<String>),
     Group(Vec<AuthField>),
 }
-
-#[cfg(feature = "client")]
-pub mod client;
-#[cfg(feature = "client")]
-pub use client::*;
