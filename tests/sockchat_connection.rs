@@ -14,7 +14,7 @@ async fn test_sockchat_connection_integration() {
 
     let mut conn = SockchatConnection::new();
 
-    conn.connect(vec![
+    conn.set_auth(vec![
         oshatori::AuthField {
             name: "sockchat_url".to_string(),
             display: None,
@@ -34,10 +34,11 @@ async fn test_sockchat_connection_integration() {
             required: true,
         },
     ])
-    .await
-    .expect("failed to connect");
+    .unwrap();
 
     let mut rx = conn.subscribe();
+
+    conn.connect().await.unwrap();
 
     tokio::time::sleep(Duration::from_millis(1200)).await;
 
