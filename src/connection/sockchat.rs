@@ -17,22 +17,26 @@ use kanii_lib::packets::{
     },
     types::Sockchatable,
 };
-use tokio::sync::broadcast;
+use tokio::sync::broadcast::{self, error::RecvError};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use url::Url;
 
 #[derive(Clone, Debug)]
 pub struct SockchatConnection {
-    sender: Option<tokio::sync::mpsc::Sender<WsMessage>>,
-    receiver: Option<broadcast::Sender<ConnectionEvent>>,
+    auth: Vec<AuthField>,
+    ws_tx: broadcast::Sender<WsMessage>,
+    event_tx: broadcast::Sender<ConnectionEvent>,
     assets: Vec<Asset>,
 }
 
 impl SockchatConnection {
     pub fn new() -> Self {
+        let (ws_tx, _) = broadcast::channel::<WsMessage>(127);
+        let (event_tx, _) = broadcast::channel(127);
         SockchatConnection {
-            sender: None,
-            receiver: None,
+            auth: vec![],
+            ws_tx: ws_tx.clone(),
+            event_tx,
             assets: Vec::new(),
         }
     }
@@ -43,38 +47,42 @@ unsafe impl Sync for SockchatConnection {}
 
 #[async_trait]
 impl Connection for SockchatConnection {
-    async fn connect(&mut self, auth: Vec<AuthField>) -> Result<(), String> {
+    fn set_auth(&mut self, auth: Vec<AuthField>) -> Result<(), String> {
+        self.auth = auth;
+        Ok(())
+    }
+
+    async fn connect(&mut self) -> Result<(), String> {
         let mut url = None;
         let mut token = None;
         let mut uid = None;
         let mut pfp_url = None;
         let mut asset_api = None;
-        let available_assets = Vec::new();
 
-        for field in auth {
+        for field in &self.auth {
             match field.name.as_str() {
                 "sockchat_url" => {
-                    if let FieldValue::Text(Some(value)) = field.value {
+                    if let FieldValue::Text(Some(value)) = field.value.clone() {
                         url = Some(value);
                     }
                 }
                 "token" => {
-                    if let FieldValue::Password(Some(value)) = field.value {
+                    if let FieldValue::Password(Some(value)) = field.value.clone() {
                         token = Some(value);
                     }
                 }
                 "uid" => {
-                    if let FieldValue::Text(Some(value)) = field.value {
+                    if let FieldValue::Text(Some(value)) = field.value.clone() {
                         uid = Some(value);
                     }
                 }
                 "pfp_url" => {
-                    if let FieldValue::Text(Some(value)) = field.value {
+                    if let FieldValue::Text(Some(value)) = field.value.clone() {
                         pfp_url = Some(value);
                     }
                 }
                 "asset_api" => {
-                    if let FieldValue::Text(Some(value)) = field.value {
+                    if let FieldValue::Text(Some(value)) = field.value.clone() {
                         asset_api = Some(value);
                     }
                 }
@@ -92,12 +100,9 @@ impl Connection for SockchatConnection {
             .map_err(|e| e.to_string())?;
         let (mut write, mut read) = ws_stream.split();
 
-        let (tx, mut rx) = tokio::sync::mpsc::channel::<WsMessage>(127);
-        let (event_tx, _) = broadcast::channel(127);
-
-        self.sender = Some(tx);
-        self.receiver = Some(event_tx.clone());
-        self.assets = available_assets.clone();
+        let tx = self.ws_tx.clone();
+        let mut rx = tx.subscribe();
+        let event_tx = self.event_tx.clone();
 
         if let Some(mut api) = asset_api {
             if api.ends_with('/') {
@@ -202,8 +207,35 @@ impl Connection for SockchatConnection {
                                     channel_name,
                                     ..
                                 } => {
+                                    current_channel.replace(channel_name.clone());
+
                                     let event = ConnectionEvent::Status {
                                         event: StatusEvent::Connected { artifact: None },
+                                    };
+                                    let _ = event_tx.send(event);
+
+                                    let event = ConnectionEvent::Channel {
+                                        event: ChannelEvent::New {
+                                            channel: Channel {
+                                                id: current_channel.clone().unwrap(),
+                                                name: current_channel.clone(),
+                                                channel_type: ChannelType::Group,
+                                            },
+                                        },
+                                    };
+                                    let _ = event_tx.send(event);
+
+                                    let event = ConnectionEvent::Channel {
+                                        event: ChannelEvent::Join {
+                                            channel_id: current_channel.clone().unwrap(),
+                                        },
+                                    };
+                                    let _ = event_tx.send(event);
+
+                                    let event = ConnectionEvent::Channel {
+                                        event: ChannelEvent::Switch {
+                                            channel_id: current_channel.clone().unwrap(),
+                                        },
                                     };
                                     let _ = event_tx.send(event);
 
@@ -214,7 +246,7 @@ impl Connection for SockchatConnection {
 
                                     let event = ConnectionEvent::User {
                                         event: UserEvent::New {
-                                            channel_id: Some(channel_name),
+                                            channel_id: current_channel.clone(),
                                             user: Profile {
                                                 id: Some(user_id),
                                                 username: Some(username),
@@ -229,7 +261,7 @@ impl Connection for SockchatConnection {
                                     if !assets_sent && !channel_assets.is_empty() {
                                         for asset in &channel_assets {
                                             let asset_event = AssetEvent::New {
-                                                channel_id: None,
+                                                channel_id: current_channel.clone(),
                                                 asset: asset.clone(),
                                             };
                                             let connection_event =
@@ -570,14 +602,28 @@ impl Connection for SockchatConnection {
         let _ = write.send(auth_packet.to_sockstr().into()).await;
 
         tokio::spawn(async move {
-            while let Some(msg) = rx.recv().await {
-                let packet =
-                    ClientPacket::Message(kanii_lib::packets::client::message::MessagePacket {
-                        user_id: uid.to_owned(),
-                        message: msg.to_string(),
-                    })
-                    .to_sockstr();
-                let _ = write.send(packet.into()).await;
+            loop {
+                let resp = rx.recv().await;
+                match resp {
+                    Ok(msg) => {
+                        let packet = ClientPacket::Message(
+                            kanii_lib::packets::client::message::MessagePacket {
+                                user_id: uid.to_owned(),
+                                message: msg.to_string(),
+                            },
+                        )
+                        .to_sockstr();
+                        let _ = write.send(packet.into()).await;
+                    }
+                    Err(e) => match e {
+                        RecvError::Lagged(skipped) => {
+                            eprintln!("skipped {}x WsMessage", skipped);
+                        }
+                        _ => {
+                            break;
+                        }
+                    },
+                }
             }
         });
 
@@ -585,45 +631,39 @@ impl Connection for SockchatConnection {
     }
 
     async fn disconnect(&mut self) -> Result<(), String> {
-        if let Some(sender) = &self.sender {
-            let _ = sender.send(WsMessage::Close(None)).await;
+        if let Err(e) = self.ws_tx.send(WsMessage::Close(None)) {
+            return Err(e.to_string());
         }
-        self.sender = None;
-        self.receiver = None;
         Ok(())
     }
 
     async fn send(&mut self, event: ConnectionEvent) -> Result<(), String> {
-        if let Some(sender) = &self.sender {
-            match event {
-                ConnectionEvent::Chat {
-                    event:
-                        ChatEvent::New {
-                            channel_id: _,
-                            message,
-                        },
-                } => {
-                    let text = if let Some(crate::MessageFragment::Text(content)) =
-                        message.content.first()
-                    {
+        match event {
+            ConnectionEvent::Chat {
+                event:
+                    ChatEvent::New {
+                        channel_id: _,
+                        message,
+                    },
+            } => {
+                let text =
+                    if let Some(crate::MessageFragment::Text(content)) = message.content.first() {
                         content.clone()
                     } else {
                         return Err("Unsupported message format".to_string());
                     };
 
-                    sender
-                        .send(WsMessage::Text(text.into()))
-                        .await
-                        .map_err(|e| e.to_string())?
+                if let Err(e) = self.ws_tx.send(WsMessage::Text(text.into())) {
+                    return Err(e.to_string());
                 }
-                _ => {}
             }
+            _ => {}
         }
         Ok(())
     }
 
     fn subscribe(&self) -> broadcast::Receiver<ConnectionEvent> {
-        self.receiver.as_ref().unwrap().subscribe()
+        self.event_tx.subscribe()
     }
 
     fn protocol_spec(&self) -> Protocol {

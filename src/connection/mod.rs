@@ -110,7 +110,8 @@ pub enum ConnectionEvent {
 
 #[async_trait]
 pub trait Connection: Send + Sync {
-    async fn connect(&mut self, auth: Vec<AuthField>) -> Result<(), String>;
+    fn set_auth(&mut self, auth: Vec<AuthField>) -> Result<(), String>;
+    async fn connect(&mut self) -> Result<(), String>;
     async fn disconnect(&mut self) -> Result<(), String>;
     async fn send(&mut self, event: ConnectionEvent) -> Result<(), String>;
     fn subscribe(&self) -> broadcast::Receiver<ConnectionEvent>;
