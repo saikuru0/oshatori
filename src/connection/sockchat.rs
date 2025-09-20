@@ -17,7 +17,11 @@ use kanii_lib::packets::{
     },
     types::Sockchatable,
 };
-use tokio::sync::broadcast::{self, error::RecvError};
+use std::sync::Arc;
+use tokio::sync::{
+    broadcast::{self, error::RecvError},
+    Mutex,
+};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use url::Url;
 
@@ -98,7 +102,7 @@ impl Connection for SockchatConnection {
         let (ws_stream, _) = connect_async(url.to_string())
             .await
             .map_err(|e| e.to_string())?;
-        let (mut write, mut read) = ws_stream.split();
+        let (write, mut read) = ws_stream.split();
 
         let tx = self.ws_tx.clone();
         let mut rx = tx.subscribe();
@@ -599,8 +603,15 @@ impl Connection for SockchatConnection {
             }
         });
 
-        let _ = write.send(auth_packet.to_sockstr().into()).await;
+        let write = Arc::new(Mutex::new(write));
+        let _ = write
+            .lock()
+            .await
+            .send(auth_packet.to_sockstr().into())
+            .await;
 
+        let msg_uid = uid.to_owned();
+        let write_clone = write.clone();
         tokio::spawn(async move {
             loop {
                 let resp = rx.recv().await;
@@ -608,12 +619,12 @@ impl Connection for SockchatConnection {
                     Ok(msg) => {
                         let packet = ClientPacket::Message(
                             kanii_lib::packets::client::message::MessagePacket {
-                                user_id: uid.to_owned(),
+                                user_id: msg_uid.clone(),
                                 message: msg.to_string(),
                             },
                         )
                         .to_sockstr();
-                        let _ = write.send(packet.into()).await;
+                        let _ = write_clone.lock().await.send(packet.into()).await;
                     }
                     Err(e) => match e {
                         RecvError::Lagged(skipped) => {
@@ -624,6 +635,24 @@ impl Connection for SockchatConnection {
                         }
                     },
                 }
+            }
+        });
+
+        let ping_uid = uid.to_owned();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_secs(40)).await;
+                let _ = write
+                    .lock()
+                    .await
+                    .send(
+                        ClientPacket::Ping(kanii_lib::packets::client::ping::PingPacket {
+                            user_id: ping_uid.clone(),
+                        })
+                        .to_sockstr()
+                        .into(),
+                    )
+                    .await;
             }
         });
 
