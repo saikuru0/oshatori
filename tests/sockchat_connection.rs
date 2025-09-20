@@ -131,3 +131,45 @@ async fn sockchat_assets() {
 
     conn.disconnect().await.unwrap();
 }
+
+#[tokio::test]
+async fn sockchat_afk() {
+    let _ = dotenvy::dotenv();
+
+    let mut conn = SockchatConnection::new();
+
+    conn.set_auth(vec![
+        oshatori::AuthField {
+            name: "sockchat_url".to_string(),
+            display: None,
+            value: oshatori::FieldValue::Text(env::var("SOCKCHAT_URL").ok()),
+            required: true,
+        },
+        oshatori::AuthField {
+            name: "token".to_string(),
+            display: None,
+            value: oshatori::FieldValue::Password(env::var("SOCKCHAT_TOKEN").ok()),
+            required: true,
+        },
+        oshatori::AuthField {
+            name: "uid".to_string(),
+            display: None,
+            value: oshatori::FieldValue::Text(env::var("SOCKCHAT_UID").ok()),
+            required: true,
+        },
+    ])
+    .unwrap();
+
+    let mut rx = conn.subscribe();
+
+    conn.connect().await.unwrap();
+
+    loop {
+        let mut received = rx.recv().await;
+        while let Err(RecvError::Lagged(_)) = received {
+            received = rx.recv().await;
+        }
+
+        dbg!(received.unwrap());
+    }
+}
