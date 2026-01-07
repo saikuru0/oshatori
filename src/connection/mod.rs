@@ -1,7 +1,7 @@
 use crate::{Asset, AuthField, Channel, Message, Profile, Protocol};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::sync::broadcast;
+use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub enum ChatEvent {
@@ -114,7 +114,7 @@ pub trait Connection: Send + Sync {
     async fn connect(&mut self) -> Result<(), String>;
     async fn disconnect(&mut self) -> Result<(), String>;
     async fn send(&mut self, event: ConnectionEvent) -> Result<(), String>;
-    fn subscribe(&self) -> broadcast::Receiver<ConnectionEvent>;
+    fn subscribe(&mut self) -> mpsc::UnboundedReceiver<ConnectionEvent>;
     fn protocol_spec(&self) -> Protocol;
 }
 

@@ -18,29 +18,28 @@ use kanii_lib::packets::{
     types::Sockchatable,
 };
 use std::sync::Arc;
-use tokio::sync::{
-    broadcast::{self, error::RecvError},
-    Mutex,
-};
+use tokio::sync::{broadcast, mpsc, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use url::Url;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SockchatConnection {
     auth: Vec<AuthField>,
     ws_tx: broadcast::Sender<WsMessage>,
-    event_tx: broadcast::Sender<ConnectionEvent>,
+    event_tx: mpsc::UnboundedSender<ConnectionEvent>,
+    event_rx: Option<mpsc::UnboundedReceiver<ConnectionEvent>>,
     assets: Vec<Asset>,
 }
 
 impl SockchatConnection {
     pub fn new() -> Self {
-        let (ws_tx, _) = broadcast::channel::<WsMessage>(127);
-        let (event_tx, _) = broadcast::channel(127);
+        let (ws_tx, _) = broadcast::channel::<WsMessage>(256);
+        let (event_tx, event_rx) = mpsc::unbounded_channel();
         SockchatConnection {
             auth: vec![],
             ws_tx: ws_tx.clone(),
             event_tx,
+            event_rx: Some(event_rx),
             assets: Vec::new(),
         }
     }
@@ -243,10 +242,13 @@ impl Connection for SockchatConnection {
                                     };
                                     let _ = event_tx.send(event);
 
-                                    let mut pic = None;
-                                    if let Some(pfp_format) = pfp_url.clone() {
-                                        pic = Some(pfp_format.replace("{uid}", user_id.as_str()));
-                                    }
+                                    let pic = {
+                                        if let Some(pfp_format) = pfp_url.clone() {
+                                            Some(pfp_format.replace("{uid}", user_id.as_str()))
+                                        } else {
+                                            None
+                                        }
+                                    };
 
                                     let event = ConnectionEvent::User {
                                         event: UserEvent::New {
@@ -627,7 +629,7 @@ impl Connection for SockchatConnection {
                         let _ = write_clone.lock().await.send(packet.into()).await;
                     }
                     Err(e) => match e {
-                        RecvError::Lagged(skipped) => {
+                        broadcast::error::RecvError::Lagged(skipped) => {
                             eprintln!("skipped {}x WsMessage", skipped);
                         }
                         _ => {
@@ -691,8 +693,10 @@ impl Connection for SockchatConnection {
         Ok(())
     }
 
-    fn subscribe(&self) -> broadcast::Receiver<ConnectionEvent> {
-        self.event_tx.subscribe()
+    fn subscribe(&mut self) -> mpsc::UnboundedReceiver<ConnectionEvent> {
+        self.event_rx
+            .take()
+            .expect("subscribe can only be called once")
     }
 
     fn protocol_spec(&self) -> Protocol {

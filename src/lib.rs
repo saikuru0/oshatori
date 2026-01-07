@@ -1,6 +1,8 @@
 use chrono::prelude::*;
+pub mod client;
 pub mod connection;
 pub mod utils;
+pub use client::StateClient;
 pub use connection::Connection;
 use serde::{Deserialize, Serialize};
 pub use utils::assets;
@@ -10,6 +12,8 @@ pub struct Account {
     pub auth: Vec<AuthField>,
     pub protocol_name: String,
     pub private_profile: Option<Profile>,
+    #[serde(default)]
+    pub autoconnect: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -105,15 +109,16 @@ pub enum AssetSource {
     Server,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Channel {
     pub id: String,
     pub name: Option<String>,
     pub channel_type: ChannelType,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub enum ChannelType {
+    #[default]
     Group,
     Direct,
     Broadcast,
