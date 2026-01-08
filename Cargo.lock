@@ -436,7 +436,8 @@ checksum = "5971ac85611da7067dbfcabef3c70ebb5606018acd9e2a3903a0da507521e0d5"
 [[package]]
 name = "hhkodo"
 version = "0.1.0"
-source = "git+https://github.com/saikuru0/88kodo#ec5ea95f6d68236ccbc99f769613b369eec02fa9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55c467d9cf94f2b27f607b15002a820d04d7014163d53f2162fce4af063d81f4"
 
 [[package]]
 name = "http"

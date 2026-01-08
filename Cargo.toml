@@ -23,12 +23,12 @@ tokio-tungstenite = { version = "0.26.2", features = [
 ], optional = true }
 url = { version = "2.5.4", optional = true }
 dotenvy = { version = "0.15.7", optional = true }
-hhkodo = { git = "https://github.com/saikuru0/88kodo", version = "0.1.0" }
 regex = "1.11.1"
 reqwest = "0.12.20"
 uuid = { version = "1.17.0", features = ["v4"] }
 tokio-util = "0.7.15"
 futures = "0.3.31"
+hhkodo = "0.1.0"
 
 [features]
 default = ["mock", "sockchat"]
