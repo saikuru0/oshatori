@@ -18,7 +18,7 @@ use kanii_lib::packets::{
     types::Sockchatable,
 };
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, Mutex};
+use tokio::sync::{broadcast, mpsc, oneshot, Mutex};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message as WsMessage};
 use url::Url;
 
@@ -29,6 +29,8 @@ pub struct SockchatConnection {
     event_tx: mpsc::UnboundedSender<ConnectionEvent>,
     event_rx: Option<mpsc::UnboundedReceiver<ConnectionEvent>>,
     assets: Vec<Asset>,
+    tasks: Vec<tokio::task::JoinHandle<()>>,
+    shutdown_tx: Option<oneshot::Sender<()>>,
 }
 
 impl SockchatConnection {
@@ -41,6 +43,8 @@ impl SockchatConnection {
             event_tx,
             event_rx: Some(event_rx),
             assets: Vec::new(),
+            tasks: Vec::new(),
+            shutdown_tx: None,
         }
     }
 }
@@ -184,7 +188,7 @@ impl Connection for SockchatConnection {
         );
 
         let channel_assets = self.assets.clone();
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             let mut current_channel: Option<String> = None;
             let mut assets_sent = false;
             while let Some(msg) = read.next().await {
@@ -254,12 +258,19 @@ impl Connection for SockchatConnection {
                                         event: UserEvent::New {
                                             channel_id: current_channel.clone(),
                                             user: Profile {
-                                                id: Some(user_id),
+                                                id: Some(user_id.clone()),
                                                 username: Some(username),
                                                 display_name: None,
                                                 color: kanii_to_rgba(color),
                                                 picture: pic,
                                             },
+                                        },
+                                    };
+                                    let _ = event_tx.send(event);
+
+                                    let event = ConnectionEvent::User {
+                                        event: UserEvent::Identify {
+                                            user_id: user_id.clone(),
                                         },
                                     };
                                     let _ = event_tx.send(event);
@@ -286,12 +297,12 @@ impl Connection for SockchatConnection {
                                     let _ = event_tx.send(event);
                                 }
                                 JoinAuthPacket::Join {
-                                    timestamp: _,
+                                    timestamp,
                                     user_id,
                                     username,
                                     color,
                                     user_permissions: _,
-                                    sequence_id: _,
+                                    sequence_id,
                                 } => {
                                     let mut pic = None;
                                     if let Some(pfp_format) = pfp_url.clone() {
@@ -301,8 +312,8 @@ impl Connection for SockchatConnection {
                                         event: UserEvent::New {
                                             channel_id: current_channel.to_owned(),
                                             user: crate::Profile {
-                                                id: Some(user_id),
-                                                username: Some(username),
+                                                id: Some(user_id.clone()),
+                                                username: Some(username.clone()),
                                                 display_name: None,
                                                 color: kanii_to_rgba(color),
                                                 picture: pic,
@@ -310,6 +321,25 @@ impl Connection for SockchatConnection {
                                         },
                                     };
                                     let _ = event_tx.send(event);
+
+                                    let join_msg = ConnectionEvent::Chat {
+                                        event: ChatEvent::New {
+                                            channel_id: current_channel.clone(),
+                                            message: Message {
+                                                id: Some(sequence_id),
+                                                sender_id: Some("-1".to_string()),
+                                                content: vec![crate::MessageFragment::Text(
+                                                    format!("{} joined", username),
+                                                )],
+                                                timestamp: DateTime::from_timestamp_nanos(
+                                                    timestamp * 1_000_000_000,
+                                                ),
+                                                message_type: MessageType::Server,
+                                                status: MessageStatus::Delivered,
+                                            },
+                                        },
+                                    };
+                                    let _ = event_tx.send(join_msg);
                                 }
                             },
 
@@ -332,12 +362,16 @@ impl Connection for SockchatConnection {
                                         channel_id: current_channel.clone(),
                                         message: Message {
                                             id: Some(packet.sequence_id),
-                                            sender_id: Some(packet.user_id),
+                                            sender_id: Some(packet.user_id.clone()),
                                             content: parsed_content,
                                             timestamp: DateTime::from_timestamp_nanos(
                                                 packet.timestamp * 1_000_000_000,
                                             ),
-                                            message_type: MessageType::Normal,
+                                            message_type: if packet.user_id == "-1" {
+                                                MessageType::Server
+                                            } else {
+                                                MessageType::Normal
+                                            },
                                             status: MessageStatus::Delivered,
                                         },
                                     },
@@ -346,6 +380,26 @@ impl Connection for SockchatConnection {
                             }
 
                             ServerPacket::UserDisconnect(packet) => {
+                                let leave_msg = ConnectionEvent::Chat {
+                                    event: ChatEvent::New {
+                                        channel_id: current_channel.clone(),
+                                        message: Message {
+                                            id: Some(packet.sequence_id.clone()),
+                                            sender_id: Some("-1".to_string()),
+                                            content: vec![crate::MessageFragment::Text(format!(
+                                                "{} left",
+                                                packet.username
+                                            ))],
+                                            timestamp: DateTime::from_timestamp_nanos(
+                                                packet.timestamp * 1_000_000_000,
+                                            ),
+                                            message_type: MessageType::Server,
+                                            status: MessageStatus::Delivered,
+                                        },
+                                    },
+                                };
+                                let _ = event_tx.send(leave_msg);
+
                                 let event = ConnectionEvent::User {
                                     event: UserEvent::Remove {
                                         channel_id: current_channel.to_owned(),
@@ -408,6 +462,10 @@ impl Connection for SockchatConnection {
                                     user_permissions: _,
                                     sequence_id: _,
                                 } => {
+                                    let mut pic = None;
+                                    if let Some(pfp_format) = pfp_url.clone() {
+                                        pic = Some(pfp_format.replace("{uid}", user_id.as_str()));
+                                    }
                                     let event = ConnectionEvent::User {
                                         event: UserEvent::New {
                                             channel_id: current_channel.to_owned(),
@@ -416,7 +474,7 @@ impl Connection for SockchatConnection {
                                                 username: Some(username),
                                                 display_name: None,
                                                 color: kanii_to_rgba(color),
-                                                picture: None,
+                                                picture: pic,
                                             },
                                         },
                                     };
@@ -513,12 +571,16 @@ impl Connection for SockchatConnection {
 
                                                 Message {
                                                     id: Some(sequence_id),
-                                                    sender_id: Some(user_id),
+                                                    sender_id: Some(user_id.clone()),
                                                     content: parsed_content,
                                                     timestamp: DateTime::from_timestamp_nanos(
                                                         timestamp,
                                                     ),
-                                                    message_type: MessageType::Normal,
+                                                    message_type: if user_id == "-1" {
+                                                        MessageType::Server
+                                                    } else {
+                                                        MessageType::Normal
+                                                    },
                                                     status: MessageStatus::Delivered,
                                                 }
                                             },
@@ -604,6 +666,7 @@ impl Connection for SockchatConnection {
                 }
             }
         });
+        self.tasks.push(task);
 
         let write = Arc::new(Mutex::new(write));
         let _ = write
@@ -614,7 +677,7 @@ impl Connection for SockchatConnection {
 
         let msg_uid = uid.to_owned();
         let write_clone = write.clone();
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
             loop {
                 let resp = rx.recv().await;
                 match resp {
@@ -639,32 +702,56 @@ impl Connection for SockchatConnection {
                 }
             }
         });
+        self.tasks.push(task);
+
+        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
+        self.shutdown_tx = Some(shutdown_tx);
 
         let ping_uid = uid.to_owned();
-        tokio::spawn(async move {
+        let task = tokio::spawn(async move {
+            tokio::pin!(shutdown_rx);
             loop {
-                tokio::time::sleep(std::time::Duration::from_secs(40)).await;
-                let _ = write
-                    .lock()
-                    .await
-                    .send(
-                        ClientPacket::Ping(kanii_lib::packets::client::ping::PingPacket {
-                            user_id: ping_uid.clone(),
-                        })
-                        .to_sockstr()
-                        .into(),
-                    )
-                    .await;
+                tokio::select! {
+                    _ = &mut shutdown_rx => {
+                        let _ = write.lock().await.send(WsMessage::Close(None)).await;
+                        break;
+                    }
+                    _ = tokio::time::sleep(std::time::Duration::from_secs(40)) => {
+                        let _ = write
+                            .lock()
+                            .await
+                            .send(
+                                ClientPacket::Ping(kanii_lib::packets::client::ping::PingPacket {
+                                    user_id: ping_uid.clone(),
+                                })
+                                .to_sockstr()
+                                .into(),
+                            )
+                            .await;
+                    }
+                }
             }
         });
+        self.tasks.push(task);
 
         Ok(())
     }
 
     async fn disconnect(&mut self) -> Result<(), String> {
-        if let Err(e) = self.ws_tx.send(WsMessage::Close(None)) {
-            return Err(e.to_string());
+        if let Some(shutdown_tx) = self.shutdown_tx.take() {
+            let _ = shutdown_tx.send(());
         }
+
+        for task in &self.tasks {
+            task.abort();
+        }
+        self.tasks.clear();
+
+        let event = ConnectionEvent::Status {
+            event: StatusEvent::Disconnected { artifact: None },
+        };
+        let _ = self.event_tx.send(event);
+
         Ok(())
     }
 

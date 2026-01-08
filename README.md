@@ -15,6 +15,9 @@
 > sure to look out for a more stable release of oshatori
 > before sending a pull request.
 
+> [!WARNING]
+> README is currently out of date.
+
 ## Introduction
 
 This project aims to generalize a broad range of text chat and social interactions. To start off let's go over the types provided by the library:

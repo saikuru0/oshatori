@@ -70,6 +70,9 @@ pub enum UserEvent {
     ClearList {
         channel_id: Option<String>,
     },
+    Identify {
+        user_id: String,
+    },
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

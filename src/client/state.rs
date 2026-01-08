@@ -38,6 +38,7 @@ pub struct ConnectionState {
     pub current_channel: Option<String>,
     pub global_users: HashMap<String, Profile>,
     pub global_assets: HashMap<String, Asset>,
+    pub current_user_id: Option<String>,
 }
 
 impl ConnectionState {
@@ -50,6 +51,7 @@ impl ConnectionState {
             current_channel: None,
             global_users: HashMap::new(),
             global_assets: HashMap::new(),
+            current_user_id: None,
         }
     }
 

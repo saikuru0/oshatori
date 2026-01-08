@@ -177,6 +177,9 @@ impl<S: StateStorage + 'static> StateClient<S> {
                     state.global_users.clear();
                 }
             }
+            UserEvent::Identify { user_id } => {
+                state.current_user_id = Some(user_id);
+            }
         }
     }
 
@@ -454,6 +457,9 @@ fn process_event(state: &mut ConnectionState, event: ConnectionEvent) {
                 } else {
                     state.global_users.clear();
                 }
+            }
+            UserEvent::Identify { user_id } => {
+                state.current_user_id = Some(user_id);
             }
         },
         ConnectionEvent::Chat { event } => match event {
